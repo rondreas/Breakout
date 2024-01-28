@@ -69,6 +69,19 @@
           playerX += 3;
         }
 
+        // update ball position,
+        ballX += ballDirectionX;
+        ballY += ballDirectionY;
+
+        // collision checks
+        if (ballY + ballRadius >= 480 || ballY - ballRadius <= 0) {
+          ballDirectionY *= -1;
+        }
+
+        if (ballX + ballRadius >= 640 || ballX - ballRadius <= 0) {
+          ballDirectionX *= -1;
+        }
+
         const canvas = document.getElementById("rt");
         if (canvas.getContext) {
           const ctx = canvas.getContext("2d");

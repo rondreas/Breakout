@@ -14,6 +14,8 @@
     <canvas id="rt" width="640" height="480"></canvas>
     <script>
     ;(() => {
+      let previousFrame = new Date();
+
       const ball_radius = 5;
       let ball_x = 320;
       let ball_y = 380;
@@ -70,6 +72,8 @@
       function main() {
         window.requestAnimationFrame(main);
 
+        let currentFrame = new Date();
+
         // update the x,y positions,
         if (up) {
           player_y -= 1;
@@ -89,6 +93,10 @@
 
           // clear the canvas
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          let fps = 1000 / (currentFrame - previousFrame);
+          ctx.fillText(`fps: ${fps.toFixed(2)}`, 5, 20);
+          previousFrame = currentFrame;
 
           for (i = 0; i < 8; i++) {
             for (j = 0; j < 20; j++) {

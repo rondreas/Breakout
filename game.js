@@ -1,3 +1,12 @@
+// https://stackoverflow.com/a/50746409
+function randomPointInCircle(radius) {
+  let r = radius * Math.sqrt(Math.random());
+  let theta = Math.random() * 2.0 * Math.PI;
+  let x = r * Math.cos(theta);
+  let y = r * Math.sin(theta);
+  return {x: x, y: y};
+}
+
 ;(() => {
   let previousFrame = new Date();
 
@@ -103,6 +112,8 @@
     let hitRight = lineLineIntersection(px, py, dx, dy, rx+rw+rr, ry, rx+rw+rr, ry+rh);
   }
 
+  const randomRadius = 1;
+
   const ballRadius = 5;
   let ballX = 320;
   let ballY = 380;
@@ -197,43 +208,59 @@
       // only check 'living' bricks
       if (brick.health > 0 && !hasHit) {
         if (pointInRectangle(ballX, ballY, brick.x, brick.y-ballRadius, brickWidth, ballRadius)) {
-          ballDirectionY *= -1;
+          let r = reflect(ballDirectionX, ballDirectionY, 0.0, -1.0);
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInRectangle(ballX, ballY, brick.x, brick.y+brickHeight, brickWidth, ballRadius)) {
-          ballDirectionY *= -1;
+          let r = reflect(ballDirectionX, ballDirectionY, 0.0, 1.0);
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInRectangle(ballX, ballY, brick.x-ballRadius, brick.y, ballRadius, brickHeight)) {
-          ballDirectionX *= -1;
+          let r = reflect(ballDirectionX, ballDirectionY, -1.0, 0.0);
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInRectangle(ballX, ballY, brick.x+brickWidth, brick.y, ballRadius, brickHeight)) {
-          ballDirectionX *= -1;
+          let r = reflect(ballDirectionX, ballDirectionY, 1.0, 0.0);
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInCircle(ballX, ballY, brick.x, brick.y, ballRadius)) {
           let r = reflect(ballDirectionX, ballDirectionY, -0.707, -0.707);
-          ballDirectionX = r.x;
-          ballDirectionY = r.y;
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInCircle(ballX, ballY, brick.x+brickWidth, brick.y, ballRadius)) {
           let r = reflect(ballDirectionX, ballDirectionY, 0.707, -0.707);
-          ballDirectionX = r.x;
-          ballDirectionY = r.y;
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInCircle(ballX, ballY, brick.x+brickWidth, brick.y+brickHeight, ballRadius)) {
           let r = reflect(ballDirectionX, ballDirectionY, 0.707, 0.707);
-          ballDirectionX = r.x;
-          ballDirectionY = r.y;
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else if (pointInCircle(ballX, ballY, brick.x, brick.y+brickHeight, ballRadius)) {
           let r = reflect(ballDirectionX, ballDirectionY, -0.707, 0.707);
-          ballDirectionX = r.x;
-          ballDirectionY = r.y;
+          let o = randomPointInCircle(randomRadius);
+          ballDirectionX = r.x + o.x;
+          ballDirectionY = r.y + o.y;
           brick.health -= 1;
           hasHit = true;
         } else {
@@ -242,9 +269,15 @@
     });
     hasHit = false;
 
-    // collision to boundary top and bottom
-    if (ballY + ballRadius >= 480 || ballY - ballRadius <= 0) {
+    // collision to boundary top 
+    if (ballY - ballRadius <= 0) {
       ballDirectionY *= -1;
+    }
+
+    if (ballY + ballRadius >= 480) {
+      playerHealth -= 1;
+      ballHeld = true;
+      ballDirectionY = -4.0;
     }
 
     // collision to sides

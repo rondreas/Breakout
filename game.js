@@ -107,8 +107,8 @@
   let ballX = 320;
   let ballY = 380;
 
-  let ballDirectionX = 4.0;
-  let ballDirectionY = 4.0;
+  let ballDirectionX = -4.0;
+  let ballDirectionY = -4.0;
 
   // brick size,
   const brickWidth = 30;
@@ -130,6 +130,9 @@
   }
 
   let hasHit = false;
+  let ballHeld = true;
+
+  let playerHealth = 3;
 
   // player size,
   const playerWidth = 48;
@@ -148,6 +151,11 @@
       right = true;
     } else if (event.keyCode === 37) {
       left = true;
+    }
+
+    // space keydown, we release the ball
+    if (event.keyCode === 32) {
+      ballHeld = false;
     }
   }
 
@@ -177,11 +185,13 @@
     playerX = Math.min(Math.max(playerX, 0), 640-playerWidth);
 
     // update ball position,
-    ballX += ballDirectionX;
-    ballY += ballDirectionY;
-
-    let projectedX = ballX + ballDirectionX;
-    let projectedY = ballY + ballDirectionY;
+    if (!ballHeld) {
+      ballX += ballDirectionX;
+      ballY += ballDirectionY;
+    } else {
+      ballX = playerX + playerWidth*0.5;
+      ballY = playerY - ballRadius - 1;
+    }
 
     bricks.forEach((brick) => {
       // only check 'living' bricks
@@ -289,9 +299,10 @@
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 640, 480);
 
-      let fps = 1000 / (currentFrame - previousFrame);
-      ctx.fillText(`fps: ${fps.toFixed(2)}`, 5, 20);
-      previousFrame = currentFrame;
+      // let fps = 1000 / (currentFrame - previousFrame);
+      // ctx.fillStyle = "rgb(255 255 255)"
+      // ctx.fillText(`fps: ${fps.toFixed(2)}`, 5, 20);
+      // previousFrame = currentFrame;
 
       bricks.forEach(function(brick) {
         if (brick.health > 0) {
@@ -307,7 +318,7 @@
       ctx.fill();
 
       // draw the player
-      ctx.fillStyle = "rgb(200 0 0)";
+      ctx.fillStyle = "rgb(241 220 237)";
       ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
     }
   }

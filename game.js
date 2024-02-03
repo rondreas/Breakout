@@ -145,6 +145,8 @@ function randomPointInCircle(radius) {
 
   let playerHealth = 3;
 
+  const playerSpeed = 0.5;
+
   // player size,
   const playerWidth = 48;
   const playerHeight = 10;
@@ -185,11 +187,13 @@ function randomPointInCircle(radius) {
     window.requestAnimationFrame(main);
 
     let currentFrame = new Date();
+    let deltaTime = (currentFrame - previousFrame);
+    previousFrame = currentFrame;
 
     if (left) {
-      playerX -= 6;
+      playerX -= playerSpeed * deltaTime;
     } else if (right) {
-      playerX += 6;
+      playerX += playerSpeed * deltaTime;
     }
 
     // clamp player position so we don't go out of bounds,

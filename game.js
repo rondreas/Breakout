@@ -1,3 +1,82 @@
+// https://developer.mozilla.org/en-US/docs/Games/Techniques/Control_mechanisms/Desktop_with_gamepad
+const GamepadAPI = {
+  active: false,
+  controller: {},
+  connect(event) {
+    // https://developer.mozilla.org/en-US/docs/Web/API/GamepadEvent/gamepad
+    GamepadAPI.controller = event.gamepad;
+    GamepadAPI.active = true;
+    console.log(`Connected controller ${GamepadAPI.controller.id} ${GamepadAPI.controller.index}`);
+    console.log(event.gamepad);
+  },
+  disconnect(event) {
+    delete GamepadAPI.controller;
+    GamepadAPI.active = false;
+  },
+  update() {
+    GamepadAPI.buttons.cache = [];
+    for (let k = 0; k < GamepadAPI.buttons.status.length; k++) {
+      GamepadAPI.buttons.cache[k] = GamepadAPI.buttons.status[k];
+    }
+    GamepadAPI.buttons.status = [];
+
+    // this, is what was missing from the guide.
+    // https://github.com/luser/gamepadtest/blob/0230a5439ab57ee16a4d5eb8cc5cd83a384af325/gamepadtest.js#L103
+    // Found that the gamepad test site worked but nothing ever happened in my code. running on safari...
+    var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
+    for (let i = 0; i < gamepads.length; i++) {
+      if (gamepads[i].id === GamepadAPI.controller.id) {
+        GamepadAPI.controller = gamepads[i];
+      }
+    }
+    const c = GamepadAPI.controller || {};
+    const pressed = [];
+    if (c.buttons) {
+      for (let b = 0; b < c.buttons.length; b++) {
+        // Here I will deviate from the example also, and opt for just storing if buttons were
+        // pressed.
+        pressed.push(c.buttons[b].pressed);
+      }
+    }
+    const axes = [];
+    if (c.axes) {
+      for (let a = 0; a < c.axes.length; a++) {
+        axes.push(c.axes[a].toFixed(2));
+        // console.log(c.axes[a]);
+      }
+    }
+    GamepadAPI.axes.status = axes;
+    GamepadAPI.buttons.status = pressed;
+    return pressed;
+  },
+  buttons: {
+    // TODO: I guess layout must get values set from the gamepad mappings
+    layout: [],
+    cache: [],
+    status: [],
+    pressed(button, state) {
+      // TODO: this does not work safari using my stadia controller
+      let newPress = false;
+      for (let i = 0; i < GamepadAPI.buttons.status.length; i++) {
+        if (GamepadAPI.buttons.status === button) {
+          newPress = true;
+          if (!hold) {
+            for (let j = 0; j < GamepadAPI.buttons.cache.length; j++) {
+              if (GamepadAPI.buttons.cache[j] === button) {
+                newPress = false;
+              }
+            }
+          }
+        }
+      }
+      return newPress;
+    },
+  },
+  axes: {
+    status: [],
+  },
+};
+
 // https://stackoverflow.com/a/50746409
 function randomPointInCircle(radius) {
   let r = radius * Math.sqrt(Math.random());
@@ -244,22 +323,38 @@ function randomPointInCircle(radius) {
     }
   }
 
-  console.log(`${distance(bricks[10].x, bricks[10].y, ballX, ballY)}`);
-
   document.addEventListener("keydown", keyDownHandler, false);
   document.addEventListener("keyup", keyUpHandler, false);
 
+  const haveEvents = 'ongamepadconnected' in window;
+
+  window.addEventListener("gamepadconnected", GamepadAPI.connect);
+  window.addEventListener("gamepaddisconnected", GamepadAPI.disconnect);
+
   function main() {
-    window.requestAnimationFrame(main);
 
     let currentFrame = new Date();
     let deltaTime = (currentFrame - previousFrame);
     previousFrame = currentFrame;
 
-    if (left) {
-      playerX -= playerSpeed * deltaTime;
-    } else if (right) {
-      playerX += playerSpeed * deltaTime;
+    if (GamepadAPI.active) {
+      GamepadAPI.update();
+
+      if (GamepadAPI.axes.status) {
+        playerX += (playerSpeed * GamepadAPI.axes.status[0]) * deltaTime;
+      }
+
+      if (GamepadAPI.buttons.status[0]) {
+        ballHeld = false;
+      }
+
+    // fallback to using keyboard
+    } else {
+      if (left) {
+        playerX -= playerSpeed * deltaTime;
+      } else if (right) {
+        playerX += playerSpeed * deltaTime;
+      }
     }
 
     // clamp player position so we don't go out of bounds,
@@ -389,6 +484,7 @@ function randomPointInCircle(radius) {
       ctx.fillStyle = "rgb(241 220 237)";
       ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
     }
+    window.requestAnimationFrame(main);
   }
 
   main();

@@ -1,3 +1,16 @@
+/**
+ * Return 1.0 for positive numbers and -1 for negative
+ * @param {number} x
+ * @returns {number}
+ */
+function sign(x) {
+  if (x < 0.0) {
+    return -1.0;
+  } else {
+    return 1.0;
+  }
+}
+
 // https://developer.mozilla.org/en-US/docs/Games/Techniques/Control_mechanisms/Desktop_with_gamepad
 const GamepadAPI = {
   active: false,
@@ -77,15 +90,6 @@ const GamepadAPI = {
   },
 };
 
-// https://stackoverflow.com/a/50746409
-function randomPointInCircle(radius) {
-  let r = radius * Math.sqrt(Math.random());
-  let theta = Math.random() * 2.0 * Math.PI;
-  let x = r * Math.cos(theta);
-  let y = r * Math.sin(theta);
-  return {x: x, y: y};
-}
-
 ;(() => {
   let previousFrame = new Date();
 
@@ -159,14 +163,6 @@ function randomPointInCircle(radius) {
     return distance(px, py, cx, cy);
   }
 
-  function sgn(x) {
-    if (x < 0.0) {
-      return 0.0;
-    } else {
-      return 1.0;
-    }
-  }
-
   // https://mathworld.wolfram.com/Circle-LineIntersection.html
   function raycastCircle(px, py, dx, dy, cx, cy, cr) {
     // if the p->d distance to c is greater than radius, early out
@@ -174,17 +170,31 @@ function randomPointInCircle(radius) {
       return {hit: false, pos:{x: 0.0, y: 0.0}};
     }
 
-    let dr = dot(dx, dy, dx, dy);
-    let D = px*(py+dy)-(px+dx)*py;
-    let discriminant = cr*cr*dr*dr-D*D;
-    if (discriminant > 0.0) {
-      let ax = (D*dy+sgn(dy)*dx*Math.sqrt(discriminant)) / (dr*dr);
-      let ay = (-D*dx+Math.abs(dy)*Math.sqrt(discriminant)) / (dr*dr);
-      let adist = squaredDistance(px, py, ax+cx, ay+cy);
+    // offset points so circle is in origin,
+    px -= cx;
+    py -= cy;
+    dx -= cx;
+    dy -= cy;
 
-      let bx = (D*dy-sgn(dy)*dx*Math.sqrt(discriminant)) / (dr*dr);
+    // repurpose the end point of the line segment, to get the 
+    // vector from start->end
+    dx = px - dx;
+    dy = py - dy;
+
+    // get length of line segment
+    let dr = Math.sqrt(dot(dx, dy, dx, dy));
+
+    let D = px*dy-dx*py;
+
+    let discriminant = ((cr*cr)*(dr*dr))-(D*D);
+    if (discriminant > 0.0) {
+      let ax = (D*dy+sign(dy)*dx*Math.sqrt(discriminant)) / (dr*dr);
+      let ay = (-D*dx+Math.abs(dy)*Math.sqrt(discriminant)) / (dr*dr);
+      let adist = squaredDistance(px, py, ax, ay);
+
+      let bx = (D*dy-sign(dy)*dx*Math.sqrt(discriminant)) / (dr*dr);
       let by = (-D*dx-Math.abs(dy)*Math.sqrt(discriminant)) / (dr*dr);
-      let bdist = squaredDistance(px, py, bx+cx, by+cy);
+      let bdist = squaredDistance(px, py, bx, by);
 
       if (adist < bdist) {
         return {hit: true, pos:{x: ax+cx, y: ay+cy}};
@@ -228,7 +238,7 @@ function randomPointInCircle(radius) {
     if (hitRight.hit) {
       return {hit: true, pos: hitRight.pos, normal: {x: 1.0, y: 0.0}};
     }
-    
+
     // check for hits on any corner,
     let topLeft = raycastCircle(px, py, dx, dy, rx, ry, rr);
     if (topLeft.hit) {
@@ -253,16 +263,13 @@ function randomPointInCircle(radius) {
     return {hit: false};
   }
 
-  const randomRadius = 0.1;
-
   const ballRadius = 5.0;
   let ballX = 320;
   let ballY = 380;
-
   let ballDirectionX = -1.0;
   let ballDirectionY = -1.0;
 
-  const ballSpeed = 0.3;
+  const ballSpeed = 0.2;
 
   // brick size,
   const brickWidth = 30;
@@ -326,10 +333,11 @@ function randomPointInCircle(radius) {
   document.addEventListener("keydown", keyDownHandler, false);
   document.addEventListener("keyup", keyUpHandler, false);
 
-  const haveEvents = 'ongamepadconnected' in window;
-
   window.addEventListener("gamepadconnected", GamepadAPI.connect);
   window.addEventListener("gamepaddisconnected", GamepadAPI.disconnect);
+
+  let dx = 0.0;
+  let dy = 0.0;
 
   function main() {
 
@@ -377,7 +385,6 @@ function randomPointInCircle(radius) {
       ballY = playerY - ballRadius - 1;
     }
 
-    let diffuse = randomPointInCircle(randomRadius);
 
     if (!ballHeld) {
       bricks.forEach((brick) => {
@@ -385,6 +392,9 @@ function randomPointInCircle(radius) {
           let raycast = raycastRoundedRectangle(previousBallX, previousBallY, ballX, ballY, brick.x, brick.y, brickWidth, brickHeight, ballRadius);
           if (raycast.hit) {
             hasHit = true;
+
+            dx = raycast.pos.x;
+            dy = raycast.pos.y;
 
             // snap the ball to the hit location,
             ballX = raycast.pos.x;
@@ -410,7 +420,7 @@ function randomPointInCircle(radius) {
       playerHealth -= 1;
       ballHeld = true;
 
-      ballDirectionX = 0.707 * sgn(ballDirectionX);
+      ballDirectionX = 0.707 * sign(ballDirectionX);
       ballDirectionY = -0.707;
     }
 
@@ -434,8 +444,8 @@ function randomPointInCircle(radius) {
     if (!ballHeld) {
       if (paddle_raycast.hit) {
 
-        // TODO: hitting corners, will snap it to the rectangle corner
-        // not the hit location on the circle it seems.
+        dx = paddle_raycast.pos.x;
+        dy = paddle_raycast.pos.y;
 
         let reflected_direction = reflect(
           ballDirectionX,
@@ -483,6 +493,12 @@ function randomPointInCircle(radius) {
       // draw the player
       ctx.fillStyle = "rgb(241 220 237)";
       ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
+
+      // debug draw hit pos,
+      ctx.beginPath();
+      ctx.fillStyle = "rgb(255 0 0)";
+      ctx.arc(dx, dy, 6.0, 0, Math.PI*2);
+      ctx.fill();
     }
     window.requestAnimationFrame(main);
   }

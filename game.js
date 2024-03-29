@@ -165,6 +165,11 @@ const GamepadAPI = {
 
   // https://mathworld.wolfram.com/Circle-LineIntersection.html
   function raycastCircle(px, py, dx, dy, cx, cy, cr) {
+    // exit early if the point p is inside the circle,
+    if (distance(px, py, cx, cy) <= cr) {
+      return {hit: false, pos:{x: 0.0, y: 0.0}};
+    }
+
     // if the p->d distance to c is greater than radius, early out
     if (pointLineSegmentDistance(cx, cy, px, py, dx, dy) > cr) {
       return {hit: false, pos:{x: 0.0, y: 0.0}};
@@ -207,36 +212,43 @@ const GamepadAPI = {
     }
   }
 
-  // get hit for ray dx, dy starting from point px, py in rect
-  function raycastRectangle(px, py, dx, dy, rx, ry, rw, rh) {
-    let hitTop = lineLineIntersection(px, py, dx, dy, rx, ry, rx+rw, ry);
-    let hitBottom = lineLineIntersection(px, py, dx, dy, rx, ry+rh, rx+rw, ry+rh);
-    let hitLeft = lineLineIntersection(px, py, dx, dy, rx, ry, rx, ry+rh);
-    let hitRight = lineLineIntersection(px, py, dx, dy, rx+rw, ry, rx+rw, ry+rh);
-  }
-
   // check intersection for extruded segments and corner circles,
   // return if we hit, and hit position and normal.
   function raycastRoundedRectangle(px, py, dx, dy, rx, ry, rw, rh, rr) {
+    let direction = normalized(px-dx, py-dy);
+
+    let dot_up = dot(direction.x, direction.y, 0.0, -1.0);
+    let dot_down = dot(direction.x, direction.y, 0.0, 1.0);
+    let dot_left = dot(direction.x, direction.y, -1.0, 0.0);
+    let dot_right = dot(direction.x, direction.y, 1.0, 0.0);
+
     // check for hits against any of the line segments,
-    let hitTop = lineLineIntersection(px, py, dx, dy, rx, ry-rr, rx+rw, ry-rr);
-    if (hitTop.hit) {
-      return {hit: true, pos: hitTop.pos, normal: {x: 0.0, y: -1.0}};
+    if (dot_up > 0.0) {
+      let hitTop = lineLineIntersection(px, py, dx, dy, rx, ry-rr, rx+rw, ry-rr);
+      if (hitTop.hit) {
+        return {hit: true, pos: hitTop.pos, normal: {x: 0.0, y: -1.0}};
+      }
     }
 
-    let hitBottom = lineLineIntersection(px, py, dx, dy, rx, ry+rh, rx+rw, ry+rh+rr);
-    if (hitBottom.hit) {
-      return {hit: true, pos: hitBottom.pos, normal: {x: 0.0, y: 1.0}};
+    if (dot_down > 0.0) {
+      let hitBottom = lineLineIntersection(px, py, dx, dy, rx, ry+rh, rx+rw, ry+rh+rr);
+      if (hitBottom.hit) {
+        return {hit: true, pos: hitBottom.pos, normal: {x: 0.0, y: 1.0}};
+      }
     }
 
-    let hitLeft = lineLineIntersection(px, py, dx, dy, rx-rr, ry, rx-rr, ry+rh);
-    if (hitLeft.hit) {
-      return {hit: true, pos: hitLeft.pos, normal: {x: -1.0, y: 0.0}};
+    if (dot_left > 0.0) {
+      let hitLeft = lineLineIntersection(px, py, dx, dy, rx-rr, ry, rx-rr, ry+rh);
+      if (hitLeft.hit) {
+        return {hit: true, pos: hitLeft.pos, normal: {x: -1.0, y: 0.0}};
+      }
     }
 
-    let hitRight = lineLineIntersection(px, py, dx, dy, rx+rw+rr, ry, rx+rw+rr, ry+rh);
-    if (hitRight.hit) {
-      return {hit: true, pos: hitRight.pos, normal: {x: 1.0, y: 0.0}};
+    if (dot_right > 0.0) {
+      let hitRight = lineLineIntersection(px, py, dx, dy, rx+rw+rr, ry, rx+rw+rr, ry+rh);
+      if (hitRight.hit) {
+        return {hit: true, pos: hitRight.pos, normal: {x: 1.0, y: 0.0}};
+      }
     }
 
     // check for hits on any corner,
@@ -269,7 +281,7 @@ const GamepadAPI = {
   let ballDirectionX = -1.0;
   let ballDirectionY = -1.0;
 
-  const ballSpeed = 0.2;
+  const ballSpeed = 0.3;
 
   // brick size,
   const brickWidth = 30;
@@ -384,7 +396,6 @@ const GamepadAPI = {
       ballX = playerX + playerWidth*0.5;
       ballY = playerY - ballRadius - 1;
     }
-
 
     if (!ballHeld) {
       bricks.forEach((brick) => {
